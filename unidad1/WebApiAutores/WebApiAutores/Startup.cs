@@ -1,5 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 using WebApiAutores.Entities;
+using WebApiAutores.Filters;
+using WebApiAutores.Middlewares;
 
 namespace WebApiAutores
 {
@@ -14,7 +18,12 @@ namespace WebApiAutores
 
         public void ConfigureServices(IServiceCollection services) 
         {
-            services.AddControllers();
+            services.AddControllers(options => 
+            {
+                options.Filters.Add(typeof(ExceptionFilter));
+            })
+                .AddJsonOptions(x => x.JsonSerializerOptions.ReferenceHandler = 
+                ReferenceHandler.IgnoreCycles);
 
             // Add DbContext
             services.AddDbContext<ApplicationDbContext>(options => 
@@ -23,12 +32,39 @@ namespace WebApiAutores
                     .GetConnectionString("DefaultConnection"));
             });
 
+            services.AddTransient<MiFiltro>();
+            services.AddAutoMapper(typeof(Startup));
+            // Add Chache Filter
+            services.AddResponseCaching();
+
+            // Add JwtConfig
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+
+            // Add CORS
+            services.AddCors(opciones => 
+            {
+                opciones.AddPolicy("CorsRule", rule => {
+                    rule.AllowAnyHeader().AllowAnyMethod().WithOrigins("*");
+                });
+            });
+
             services.AddEndpointsApiExplorer();
             services.AddSwaggerGen();
         }
 
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env) 
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger)  
         {
+            //app.Map("/semitas", app => 
+            //{
+            //    app.Run(async contexto =>
+            //    {
+            //        await contexto.Response
+            //        .WriteAsync("Interceptando la pipeline de procesos");
+            //    });
+            //});            
+
+            app.UseLogginResponseHttp();
+
             if (env.IsDevelopment())
             {
                 app.UseSwagger();
@@ -38,6 +74,10 @@ namespace WebApiAutores
             app.UseHttpsRedirection();
 
             app.UseRouting();
+
+            app.UseResponseCaching();
+
+            app.UseCors("CorsRule");
 
             app.UseAuthorization();
 

@@ -8,6 +8,16 @@ namespace WebApiAutores.Entities
         {
         }
 
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
+
+            builder.Entity<Book>()
+                .HasIndex(x => x.ISBN)
+                .IsUnique(true);
+        }
+
         public DbSet<Autor> Autores { get; set; }
+        public DbSet<Book> Books { get; set; }
     }
 }
