@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace WebApiAutores.Entities
 {
-    [Table("books")]
+    [Table("books", Schema = "transacctional")]
     public class Book
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]

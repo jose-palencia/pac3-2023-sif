@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using WebApiAutores.Entities;
 
-namespace WebApiAutores.Dtos
+namespace WebApiAutores.Dtos.Books
 {
     public class BookDto
     {
@@ -16,7 +16,7 @@ namespace WebApiAutores.Dtos
 
         public int AutorId { get; set; }
 
-        public string AutorName { get; set; }
+        public string AutorNombre { get; set; }
 
     }
 }

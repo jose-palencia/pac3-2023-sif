@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
-using WebApiAutores.Dtos;
+using WebApiAutores.Dtos.Autores;
+using WebApiAutores.Dtos.Books;
 using WebApiAutores.Entities;
 
 namespace WebApiAutores.Helpers
@@ -9,13 +10,24 @@ namespace WebApiAutores.Helpers
         public AutoMapperProfiles()
         {
             MapsForBooks();    
-            
+            MapsForAutores();
         }
 
-        void MapsForBooks()
+        private void MapsForAutores() 
         {
-            CreateMap<BookDto, Book>().ReverseMap();
+            CreateMap<Autor, AutorDto>();
+            CreateMap<Autor, AutorGetByIdDto>();
+            CreateMap<AutorCreateDto, Autor>();
+        }
 
+        private void MapsForBooks()
+        {
+            //CreateMap<BookDto, Book>().ReverseMap();
+
+            CreateMap<Book, BookDto>()
+                .ForPath(dest => dest.AutorNombre, opt => opt.MapFrom(src => src.Autor.Name));
+            
+            CreateMap<BookCreateDto, Book>();
         }
 
 

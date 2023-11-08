@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http.HttpResults;
+﻿using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using WebApiAutores.Dtos;
+using WebApiAutores.Dtos.Autores;
 using WebApiAutores.Entities;
-using WebApiAutores.Filters;
 
 namespace WebApiAutores.Controllers
 {
@@ -13,71 +13,118 @@ namespace WebApiAutores.Controllers
     public class AutoresController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IMapper _mapper;
 
-        public AutoresController(ApplicationDbContext context)
+        public AutoresController(ApplicationDbContext context,
+            IMapper mapper)
         {
             _context = context;
+            _mapper = mapper;
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<Autor>>> Get() 
+        public async Task<ActionResult<ResponseDto<IReadOnlyList<AutorDto>>>> Get() 
         {
-            return await _context.Autores.ToListAsync();
+            var autoresDb = await _context.Autores.ToListAsync();
+            var autoresDto = _mapper.Map<List<AutorDto>>(autoresDb);
+            return Ok(new ResponseDto<List<AutorDto>>
+            {
+                Status = true,
+                Data = autoresDto
+            });
         }
 
         [HttpGet("{id:int}")]
-        //[Authorize]
-        [ServiceFilter(typeof(MiFiltro))]
-        [ResponseCache(Duration = 10)]
-        public async Task<ActionResult<object>> GetOneById(int id) 
+        public async Task<ActionResult<ResponseDto<AutorGetByIdDto>>> GetOneById(int id) 
         {
-            throw new NotImplementedException();
-            var autor = await _context.Autores.FirstOrDefaultAsync(x => x.Id == id);
+            var autorDb = await _context.Autores
+                .Include(a => a.Books)
+                .FirstOrDefaultAsync(x => x.Id == id);
 
-            return new {
-                autor,
-                number = new Random().Next(0, 100)
-            };
+            if (autorDb is null)
+            {
+                return NotFound(new ResponseDto<AutorGetByIdDto> 
+                {
+                    Status = false,
+                    Message = $"El autor con id {id}, no fue encontrado."
+                });
+            }
+
+            var autorDto = _mapper.Map<AutorGetByIdDto>(autorDb);
+            
+            return Ok(new ResponseDto<AutorGetByIdDto> 
+            {
+                Status = true,
+                Data = autorDto
+            });
         }
 
         [HttpPost]
-        public async Task<ActionResult> Post(Autor modelo) 
+        public async Task<ActionResult<ResponseDto<AutorDto>>> Post(AutorCreateDto dto) 
         {
-            _context.Add(modelo);
+            var autor = _mapper.Map<Autor>(dto);
+
+            _context.Add(autor);
             await _context.SaveChangesAsync();
 
-            return Ok();
+            var autorDto = _mapper.Map<AutorDto>(autor);
+
+            return StatusCode(StatusCodes.Status201Created, new ResponseDto<AutorDto> 
+            {
+                Status = true,
+                Data = autorDto
+            });
         }
 
         [HttpPut("{id:int}")] // api/autores/4
-        public async Task<IActionResult> Put(int id, Autor modelo) 
+        public async Task<ActionResult<ResponseDto<AutorGetByIdDto>>> Put(int id, AutorUpdateDto dto) 
         {
-            var autor = await _context.Autores.FirstOrDefaultAsync(a => a.Id == id);
-            if (autor is null)
+            var autorDb = await _context.Autores.FirstOrDefaultAsync(a => a.Id == id);
+            if (autorDb is null)
             {
-                return NotFound("Autor no encontrado");
+                return NotFound(new ResponseDto<AutorGetByIdDto>
+                {
+                    Status = false,
+                    Message = $"El autor con id {id}, no fue encontrado."
+                });
             }
 
-            autor.Name = modelo.Name;
-            _context.Update(autor);
+            _mapper.Map<AutorUpdateDto, Autor>(dto, autorDb);
+
+            _context.Update(autorDb);
             await _context.SaveChangesAsync();
 
-            return Ok();
+            var autorDto = _mapper.Map<AutorGetByIdDto>(autorDb);
+
+            return Ok(new ResponseDto<AutorGetByIdDto> 
+            {
+                Status = true,
+                Message = "Autor editado correctamente",
+                Data = autorDto
+            });
         }
 
         [HttpDelete("{id:int}")]
-        public async Task<IActionResult> Delete(int id) 
+        public async Task<ActionResult<ResponseDto<string>>> Delete(int id) 
         {
             var autor = await _context.Autores.FirstOrDefaultAsync(a => a.Id == id);
             if (autor is null)
             {
-                return NotFound("Autor no encontrado");
+                return NotFound(new ResponseDto<AutorGetByIdDto>
+                {
+                    Status = false,
+                    Message = $"El autor con id {id}, no fue encontrado."
+                });
             }
 
             _context.Remove(autor);
             await _context.SaveChangesAsync();
 
-            return Ok();
+            return Ok(new ResponseDto<string> 
+            {
+                Status = true,
+                Message = $"El autor con el id {id} fue borrado"
+            });
         }
     }
 }
